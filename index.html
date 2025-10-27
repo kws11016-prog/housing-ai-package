@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>청년청약AI 통합패키지</title>
+  <style>
+    body{font-family:'Pretendard',sans-serif;background:#f5f7fa;color:#222;margin:0;padding:0;}
+    .container{max-width:1000px;margin:80px auto;padding:20px;text-align:center;}
+    h1{font-size:44px;font-weight:700;margin-bottom:30px;}
+    p.subtitle{text-align:center;line-height:1.6;font-size:18px;margin-bottom:25px;white-space:pre-line;}
+    form{background:#fff;padding:30px;border-radius:16px;box-shadow:0 5px 20px rgba(0,0,0,0.1);text-align:left;}
+    label{display:block;margin:15px 0 5px;font-weight:600;}
+    select,input[type=range]{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;}
+    fieldset{border:1px solid #ccc;border-radius:8px;padding:10px 15px;margin-top:10px;}
+    legend{font-weight:600;}
+    .submit-btn{display:block;width:100%;margin-top:25px;padding:15px;background:#0078ff;color:#fff;font-size:18px;font-weight:700;border:none;border-radius:12px;cursor:pointer;}
+    .submit-btn:hover{background:#005fcc;}
+    .results{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:40px;}
+    .card{background:#fff;border-radius:16px;box-shadow:0 3px 12px rgba(0,0,0,0.1);overflow:hidden;text-align:left;}
+    .thumb{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:#e9eef5;}
+    .card h3{margin:10px 15px 5px;font-size:18px;}
+    .card p{margin:0 15px 15px;color:#555;font-size:14px;}
+    .hidden{display:none;}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>청년청약AI 통합패키지</h1>
+    <p class="subtitle">지역·주거유형·공급면적·청약대상자 유형을 한 번에 선택하고,\n하단의 버튼으로 맞춤 공고를 확인하세요.</p>
+
+    <form id="searchForm" onsubmit="event.preventDefault(); renderResults();">
+      <label>지역 선택</label>
+      <select id="regionSel" required>
+        <option value="" disabled selected>시/도 선택</option>
+        <option>서울특별시</option>
+        <option>부산광역시</option>
+        <option>대구광역시</option>
+        <option>인천광역시</option>
+        <option>경기도</option>
+        <option>제주특별자치도</option>
+      </select>
+
+      <label>주거유형 선택</label>
+      <select id="typeSel" required>
+        <option value="" disabled selected>유형 선택</option>
+        <option>아파트</option>
+        <option>오피스텔</option>
+        <option>도시형</option>
+        <option>민간임대</option>
+      </select>
+
+      <label>공급면적 선택 (최대 85㎡)</label>
+      <input id="areaRange" type="range" min="10" max="85" value="59" step="1" oninput="document.getElementById('areaOut').value=this.value">
+      <output id="areaOut">59</output> ㎡
+
+      <fieldset>
+        <legend>청약대상자 유형</legend>
+        <label><input id="chkYouth" type="checkbox" checked> 청년</label>
+        <label><input id="chkNewly" type="checkbox"> 신혼부부</label>
+      </fieldset>
+
+      <button id="submitBtn" class="submit-btn" type="submit">나만의 맞춤형 청약 공고 확인하기</button>
+    </form>
+
+    <div id="resultsWrap" class="hidden">
+      <h2 style="margin:32px 0 10px">추천 청약 공고</h2>
+      <div id="results" class="results"></div>
+    </div>
+  </div>
+
+  <script>
+    // 신뢰성 높은 이미지 링크(Unsplash Source/Picsum) 사용
+    const SAFE_IMG = {
+      apt: 'https://images.unsplash.com/photo-1515266591878-f93e32bc5937?auto=format&fit=crop&w=800&q=80',
+      officetel: 'https://images.unsplash.com/photo-1501183638710-841dd1904471?auto=format&fit=crop&w=800&q=80',
+      urban: 'https://images.unsplash.com/photo-1521782462922-9318be1fcc67?auto=format&fit=crop&w=800&q=80',
+      rent: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=800&q=80',
+      fallback: (seed)=> `https://picsum.photos/seed/${seed}/800/600`
+    };
+
+    const DATA = [
+      {type:'아파트', region:'서울특별시', title:'서울 강남 청년 아파트', size:59, price:'분양가 4.8억', tag:'청년 우대형', img:SAFE_IMG.apt},
+      {type:'오피스텔', region:'인천광역시', title:'인천 송도 오피스텔', size:75, price:'분양가 3.6억', tag:'신혼부부 특화형', img:SAFE_IMG.officetel},
+      {type:'도시형', region:'대전광역시', title:'대전 유성 도시형 생활주택', size:45, price:'임대 월 65만', tag:'역세권', img:SAFE_IMG.urban},
+      {type:'민간임대', region:'부산광역시', title:'부산 해운대 민간임대', size:80, price:'월세 90만', tag:'장기임대', img:SAFE_IMG.rent},
+      {type:'아파트', region:'경기도', title:'경기 판교 신혼부부 아파트', size:74, price:'분양가 5.2억', tag:'신혼부부', img:SAFE_IMG.apt},
+      {type:'오피스텔', region:'서울특별시', title:'서울 마포 역세권 오피스텔', size:49, price:'분양가 2.9억', tag:'청년 선호', img:SAFE_IMG.officetel},
+      {type:'아파트', region:'광주광역시', title:'광주 상무지구 아파트', size:85, price:'분양가 4.5억', tag:'일반공급', img:SAFE_IMG.apt},
+      {type:'민간임대', region:'제주특별자치도', title:'제주 연동 민간임대 주택', size:70, price:'월세 80만', tag:'바다전망', img:SAFE_IMG.rent}
+    ];
+
+    function unique(list){
+      const seen = new Set();
+      return list.filter(x=>{ const k = x.title; if(seen.has(k)) return false; seen.add(k); return true; });
+    }
+
+    function ensureFour(base, region, type, area){
+      let list = [...base];
+      if(list.length < 4){
+        list = list.concat(DATA.filter(d=> d.region===region && d.size<=area && !list.includes(d)));
+      }
+      if(list.length < 4){
+        list = list.concat(DATA.filter(d=> d.type===type && !list.includes(d)));
+      }
+      if(list.length < 4){
+        list = list.concat(DATA.filter(d=> !list.includes(d)));
+      }
+      return unique(list).slice(0,4);
+    }
+
+    function imgTag(src, seed){
+      const safe = src || SAFE_IMG.fallback(seed);
+      return `<img class="thumb" loading="lazy" src="${safe}" alt="주택 이미지"
+        onerror="this.onerror=null; this.src='${SAFE_IMG.fallback('fallback'+seed)}';" />`;
+    }
+
+    function renderResults(){
+      const region = document.getElementById('regionSel').value;
+      const type = document.getElementById('typeSel').value;
+      const area = Number(document.getElementById('areaRange').value);
+      const wantYouth = document.getElementById('chkYouth').checked;
+      const wantNewly = document.getElementById('chkNewly').checked;
+
+      let base = DATA.filter(d => d.type === type && d.size <= area);
+      let list = ensureFour(base, region, type, area);
+
+      if(wantYouth || wantNewly){
+        const score = (x)=> (wantYouth && /청년|청년 우대|청년 선호/.test(x.tag) ? 1:0) + (wantNewly && /신혼/.test(x.tag) ? 1:0);
+        list.sort((a,b)=> score(b)-score(a));
+      }
+
+      const wrap = document.getElementById('results');
+      wrap.innerHTML = list.map((v,i)=>`
+        <div class="card">
+          ${imgTag(v.img, 's'+i)}
+          <h3>${v.title}</h3>
+          <p>${v.size}㎡ / ${v.price} / ${v.tag}</p>
+        </div>
+      `).join('');
+
+      document.getElementById('resultsWrap').classList.remove('hidden');
+      document.getElementById('resultsWrap').scrollIntoView({behavior:'smooth'});
+    }
+  </script>
+</body>
+</html>
